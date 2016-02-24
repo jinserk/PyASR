@@ -1,5 +1,6 @@
 # Copyright 2014    Yajie Miao    Carnegie Mellon University
 #           2015    Yun Wang      Carnegie Mellon University
+#           2016    Jinserk Baik
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -142,7 +143,7 @@ class KaldiScpRead(object):
         # now start to read the feature matrix into a numpy matrix
         header = struct.unpack('<xcccc', ark_read_buffer.read(5))
         if header[0] != b'B':
-            print "Input .ark file is not binary"; exit(1)
+            print("Input .ark file is not binary"); exit(1)
 
         rows = 0; cols= 0
         m, rows = struct.unpack('<bi', ark_read_buffer.read(5))
