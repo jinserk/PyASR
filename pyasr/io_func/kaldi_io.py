@@ -23,8 +23,70 @@ import struct
 import numpy
 import theano
 import theano.tensor as T
-from model_io import log
-from io_func import smart_open, preprocess_feature_and_label, shuffle_feature_and_label
+from . import smart_open, preprocess_feature_and_label, shuffle_feature_and_label
+
+class KaldiArkRead(object):
+
+    def open(self, path):
+        self.read_buffer = smart_open(path, 'rb')
+
+    def close(self):
+        self.read_buffer.close()
+
+    def load_mat(self, pos):
+        self.read_buffer.seek(int(pos), 0)
+        # now start to read the feature matrix into a numpy matrix
+        header = struct.unpack('<xcccc', self.read_buffer.read(5))
+        if header[0] == b'B':
+            if header[1] == b'D':
+                return self.load_bin_mat(8)
+            else:
+                return self.load_bin_mat(4)
+        else:
+            return self.load_txt_mat()
+
+    def load_bin_mat(self, bit=4):
+        rows = 0; cols = 0
+        m, rows = struct.unpack('<bi', self.read_buffer.read(5))
+        n, cols = struct.unpack('<bi', self.read_buffer.read(5))
+        if bit == 4:
+            tmp_mat = numpy.frombuffer(self.read_buffer.read(rows * cols * 4), dtype=numpy.float32)
+            utt_mat = numpy.reshape(tmp_mat, (rows, cols))
+        else:
+            tmp_mat = numpy.frombuffer(self.read_buffer.read(rows * cols * 8), dtype=numpy.float64)
+            utt_mat = numpy.reshape(tmp_mat, (rows, cols))
+        return utt_mat
+
+    def load_txt_mat(self):
+        line = self.read_buffer.readline()
+        utt_mat = numpy.fromstring(line, dtype=numpy.float64, sep=' ')
+        if b']' in line:
+            utt_mat = utt_mat[0:-1]
+        else:
+            cols = len(utt_mat)
+            while not b']' in line:
+                line = self.read_buffer.readline()
+                tmp = numpy.fromstring(line, dtype=numpy.float64, sep=' ', count=cols)
+                utt_mat = numpy.vstack((utt_mat, tmp))
+        return utt_mat
+
+    def find_key(self, key):
+        self.read_buffer.seek(0, 0)
+        fpos = self.read_buffer.tell()
+        for line in self.read_buffer:
+            lpos = line.find(str.encode(key))
+            if lpos != -1:
+                return fpos+len(key)+lpos+1
+            fpos = self.read_buffer.tell()
+        raise KeyError
+
+    def read(self, key=None, pos=None):
+        if key:
+            pos = self.find_key(key)
+            return self.load_mat(pos)
+        elif pos:
+            return self.load_mat(pos)
+        raise ValueError
 
 class KaldiDataRead(object):
 
