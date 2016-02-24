@@ -88,7 +88,7 @@ class KaldiArkRead(object):
             return self.load_mat(pos)
         raise ValueError
 
-class KaldiDataRead(object):
+class KaldiScpRead(object):
 
     def __init__(self, scp_list = [], read_opts = None):
 
@@ -141,7 +141,7 @@ class KaldiDataRead(object):
 
         # now start to read the feature matrix into a numpy matrix
         header = struct.unpack('<xcccc', ark_read_buffer.read(5))
-        if header[0] != "B":
+        if header[0] != b'B':
             print "Input .ark file is not binary"; exit(1)
 
         rows = 0; cols= 0
